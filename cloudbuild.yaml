@@ -1,0 +1,42 @@
+substitutions:
+  _APP: 'test-build'
+  _ENV: '${BRANCH_NAME}'
+  _LOCATION: 'asia-southeast1'
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: 'build-image'
+    args:
+      - build
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_APP}/${_ENV}:${SHORT_SHA}
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_APP}/${_ENV}:${REF_NAME}
+      - -t
+      - ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_APP}/${_ENV}:latest
+      - --build-arg
+      - NODE_ENV=${_ENV}
+      - --build-arg
+      - REF_NAME=${REF_NAME}
+      - '.'
+  - name: gcr.io/cloud-builders/kubectl
+    id: 'deploy-image'
+    args:
+      - set
+      - image
+      - deployments
+      - ${_APP}=${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_APP}/${_ENV}:${SHORT_SHA}
+      - -l
+      - app.kubernetes.io/component=${_APP}
+      - --namespace
+      - ${_ENV}
+
+images:
+  - ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_APP}/${_ENV}:${SHORT_SHA}
+  - ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_APP}/${_ENV}:${REF_NAME}
+  - ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_APP}/${_ENV}:latest
+
+options:
+  env:
+    - CLOUDSDK_CONTAINER_CLUSTER=baanruejai
+    - CLOUDSDK_COMPUTE_ZONE=asia-southeast1-b
